@@ -84,18 +84,11 @@ int main( int argc, char **argv )
     }
 
     
-    asyncMans = new AsyncMan[asyncManCount];
-    buf = new unsigned char*[connectionCount];
-    cons = new S3Connection*[connectionCount];
     
-    S3Config config = {};
+    
+    
+    
 
-    if( !( config.accKey = getenv( "AWS_ACCESS_KEY" ) ) ||
-        !( config.secKey = getenv( "AWS_SECRET_KEY" ) )  )
-    {
-        std::cout << "no AWS_XXXX is set. ";
-        return 1;
-    }
     
     int unitSize = objectMB * MB / size / connectionCount;
     int base = objectMB * MB / size * rank;
@@ -137,47 +130,8 @@ int main( int argc, char **argv )
     
     if (rank == 0)
         std::cerr << "Total time: " << time << "ms" << "\n";
-
-    /*
-    int p = 0;    
-    for (int c = 0; c < connectionCount; ++c)
-    {
-
-       for (int i = 0; i < unitSize; ++i)
-       {
-            p = p ^ buf[c][i];
-       }
-    }
-    printf("xor: %u\n", p);
-
-    bool same = true;
-    for (int i = 0; i < unitSize; ++i)
-    {
-        for (int c = 1; c < connectionCount; ++c)
-        {
-            if (buf[0][i] != buf[c][i])
-            {
-                same = false;
-                break;
-            }
-        }
-        if (!same) break;
-    }
-    fprintf(stderr, "%d\n", same);
-    if (same)
-    {
-        for (int i = 0; i < 10; ++i)
-            fprintf(stderr, "%d ", buf[0][i]);
-        fprintf(stderr, "\n");
-    }*/
-
     
     MPI::Finalize();
-    for ( int i = 0; i < connectionCount; ++i )
-    {
-        delete cons[i];
-    }
-    delete cons;
-
+  
     return 0;
 }

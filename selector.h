@@ -10,10 +10,14 @@
 
 #include "s3conn.h"
 #include "sysutils.h"
+#include <mpi.h>
 
 #define AsyncManCount 2
 #define ConnectionCount 16
+#define BucketSize 16777216
+#define K 10
 
+using namespace std;
 using namespace webstor;
 using namespace webstor::internal;
 
@@ -22,8 +26,17 @@ public:
     selector();
     ~selector();
     
-    void run();
+    bool init(char * bucketName);
     
+    void run(int idLow, int idHigh, int sendToRank);
+
+    
+    inline void getKey(char *buf, int id);
+    void preProcess(unsigned char * buf);
+    
+    bool toDelete;
+    char bucketName[100];
+    int topk[K];
     unsigned char** buf;
     AsyncMan asyncMans[AsyncManCount];
     S3Connection *cons;

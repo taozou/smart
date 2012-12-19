@@ -8,6 +8,7 @@
 #include "aggregator.h"
 
 aggregator::aggregator() {
+       
 }
 
 aggregator::~aggregator() {
