@@ -10,7 +10,6 @@
 
 #include "s3conn.h"
 #include "sysutils.h"
-#include <mpi.h>
 
 #define AsyncManCount 2
 #define ConnectionCount 16
@@ -39,7 +38,7 @@ public:
     int topk[K];
     unsigned char** buf;
     AsyncMan asyncMans[AsyncManCount];
-    S3Connection *cons;
+    S3Connection **cons;
 };
 
 #endif	/* SELECTOR_H */

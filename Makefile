@@ -21,21 +21,25 @@ LIBRARIES=
 
 ### RULES ###
 
-CXXFLAGS+=$(DEFINES) $(INCLUDES) $(LIBRARIES) -Wno-enum-compare
-LOADLIBES+=-lcurl -lssl -lxml2 -O3
+CXXFLAGS+=$(DEFINES) $(INCLUDES) $(LIBRARIES) -Wno-enum-compare -O3
+LOADLIBES+=-lcurl -lssl -lxml2 
 CC=mpic++
 
 .PHONY: all
-all: smart webstor.a
+all: smart smart.a
 	
 smart: smart.cpp
-	$(CC) $(CXXFLAGS) smart.cpp webstor.a $(LOADLIBES) -o smart
-
+	$(CC) $(CXXFLAGS) smart.cpp smart.a $(LOADLIBES) -o smart
+	
 .PHONY: clean
 clean:
-	rm -f smart webstor.a
+	rm -f smart smart.a 
 
-smart: webstor.a
+smart: smart.a
 
-webstor.a: webstor.a(asyncurl.o s3conn.o sysutils.o)
-
+smart.a: smart.a(asyncurl.o s3conn.o sysutils.o selector.o aggregator.o)
+	
+.cpp.a:
+	$(CC) $(CXXFLAGS) -c $< -o $*.o
+	$(AR) r $@ $*.o
+	$(RM) $*.o

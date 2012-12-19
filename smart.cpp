@@ -1,24 +1,11 @@
-//#include <sstream>
-//#include <memory>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <mpi.h>
+#include "selector.h"
+#include "aggregator.h"
 
-static const int KB = 1024;
-static const int MB = KB * 1024;
-static const char bucketName[100] = "scanspeed";
-
-
-
-bool readAll = false;
-
-static std::string getKey( int i, int objectMB )
-{
-    std::stringstream tmp;
-    tmp << i << "/" << objectMB << "mb" ;
-    //tmp << objectMB << "mb/" << (offset + i);
-    return tmp.str();
-}
+char bucketName[100] = "scanspeed";
 
 int main( int argc, char **argv )
 {
@@ -65,73 +52,50 @@ int main( int argc, char **argv )
     if (keyHigh == -1)
         keyHigh = sCount;
     
+    int perCount = keyHigh / size;
+    
+    if (perCount * size < keyHigh)
+        ++perCount;
+    
+    int idLow = perCount * rank;
+    int idHigh = idLow + perCount;
+    
+    if (idHigh > keyHigh)
+        idHigh = keyHigh;
+    
+    //assume aCount <= sCount 
+    int perAggr = sCount / aCount;
+    if (perAggr * aCount < sCount)
+        ++perAggr;
+    
     if (rank == 0)
     {
-        Aggregator.run(inputcount, NULL);
+        aggregator a;
+        a.run(aCount, -1);
     }
     else if (rank <= sCount)
     {
-        Selector.run(low,high, upRank);
+        int idA = (rank - 1) / perAggr + 1;
+        selector s;
+        s.init(bucketName);
+        s.run(idLow, idHigh, idA + sCount);
     }
     else if (rank <= sCount + aCount)
     {
-        Aggregator.run(inputcount, upRank);
-    }
-    else
-    {
-        MPI::Finalize();
-        return 1;
-    }
-
-    
-    
-    
-    
-    
-
-    
-    int unitSize = objectMB * MB / size / connectionCount;
-    int base = objectMB * MB / size * rank;
-    
-    Stopwatch total;
-    //fprintf(stderr, "%d %d %d\n", rank, base, unitSize);
-    for ( int i = 0; i < connectionCount; ++i )
-    {
-        cons[i] = new S3Connection(config);
-        buf[i] = new unsigned char[ unitSize ];
-        //buf[i] = new unsigned char[ objectMB * MB ];
-        memset(buf[i], 0, unitSize);
+        aggregator a;
+        if ( ((rank - sCount) * perAggr) > sCount)
+            a.run( sCount - (rank - sCount -1 ) * perAggr, 0);
+        else
+            a.run( perAggr, 0 );
     }
 
-    //get
-    Stopwatch stopwatch;
-    if (rank == 0) std::cout << connectionCount << " connection(s): \n";
-
-    
-    MPI::COMM_WORLD.Barrier();
-    total.start();
-    stopwatch.start();
-    
-    for ( int i = 0; i < connectionCount; ++i )
-    {
-        //fprintf(stderr, "size %d; offset %d\n", unitSize, unitSize * i + base);
-        cons[i]->pendGet( &asyncMans[i % asyncManCount],
-                bucketName, getKey(key, objectMB).c_str(), buf[i], unitSize, unitSize * i + base);
-    }
-
-    for ( int i = 0; i < connectionCount; ++i )
-        cons[i]->completeGet();
-    
-    double time = total.elapsed();
-    double bandwidth = 1000.0 * objectMB / size / stopwatch.elapsed();
-    std::cerr << rank << ": " << bandwidth << "MiB/s\n";
-    
-    MPI::COMM_WORLD.Barrier();
-    
-    if (rank == 0)
-        std::cerr << "Total time: " << time << "ms" << "\n";
-    
     MPI::Finalize();
-  
+    return 0;
+    
+    //Stopwatch stopwatch;
+    
+    
+    //MPI::COMM_WORLD.Barrier();
+    
     return 0;
 }

@@ -7,6 +7,9 @@
 
 #include "selector.h"
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <mpi.h>
 
 selector::selector()
 {
@@ -38,7 +41,7 @@ bool selector::init(char * bucketName) {
     if( !( config.accKey = getenv( "AWS_ACCESS_KEY" ) ) ||
         !( config.secKey = getenv( "AWS_SECRET_KEY" ) )  )
     {
-        std::cout << "no AWS_XXXX is set. ";
+        fprintf(stderr, "no AWS_XXXX is set. \n");
         return false;
     }
 
@@ -47,7 +50,6 @@ bool selector::init(char * bucketName) {
 
     cons = new S3Connection*[ConnectionCount];
     buf = new unsigned char*[ConnectionCount];
-    asyncMans = new AsyncMan[AsyncManCount];
     
     for ( int i = 0; i < ConnectionCount; ++i )
     {
@@ -66,8 +68,6 @@ void selector::run(int idLow, int idHigh, int sendToRank) {
         getKey(key, idLow+i);
         cons[i]->pendGet( &asyncMans[i % AsyncManCount],
                 bucketName, key, buf[i], BucketSize);
-        
-        
     }
 
     for ( int i = ConnectionCount; i < totalKey; ++i)
@@ -83,7 +83,6 @@ void selector::run(int idLow, int idHigh, int sendToRank) {
             fprintf(stderr, "get fail on %d\n", idLow + i);
         }
         
-        
         preProcess(buf[k]);
         
         getKey(key, idLow+i);
@@ -98,9 +97,7 @@ void selector::run(int idLow, int idHigh, int sendToRank) {
     }
     //double bandwidth = 1000.0 * objectMB * totalKey/ stopwatch.elapsed();
     //std::cout << rank << ": " << bandwidth << "MiB/s\n";
-    MPI::COMM_WORLD.Send();
-    
-    //send something to uprank
+    MPI::COMM_WORLD.Send(&topk, K * sizeof(int), MPI::CHAR, sendToRank, 0);
 }
 
 selector::~selector() {
